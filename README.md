@@ -65,10 +65,11 @@ In each folder, `libusb-1.0.dll` is this shim and `libusb-1.0.orig.dll` is MSYS2
 So a CH341A on the WCH driver goes through the shim, while FT232H (through
 `libftdi1.dll`) and CH347 go through the original libusb.
 
-On another PC, the script clones `libusb341` only if `LIBUSB341_URL` points to a git
-copy of it. Otherwise, copy this folder to `~/libusb341` first. Other settings (`ONLY`,
-`SKIP_PACMAN`, `SKIP_UPDATE`, `RUN_TESTS`, the repository URLs) are listed at the top of
-the script.
+On another PC, the script clones this repository from
+`https://github.com/Anime4000/libusb341.git` if `~/libusb341` is missing (set
+`LIBUSB341_URL` to use another URL). Other settings (`ONLY`, `SKIP_PACMAN`,
+`SKIP_UPDATE`, `RUN_TESTS`, the IMSProg/SFP-Master URLs) are listed at the top of the
+script.
 
 ## Driver setup
 

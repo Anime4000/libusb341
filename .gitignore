@@ -1,0 +1,21 @@
+# Build output of `make` and `make test` (DLLs, EXEs, import libraries, objects,
+# the simulator build and the SFP-Master sources extracted for the tests)
+/build/
+
+# Compiled files anywhere else, e.g. copies made for testing
+*.o
+*.obj
+*.a
+*.dll
+*.exe
+
+# Logs written with LIBUSB341_LOG
+*.log
+
+# Editors and OS
+.vscode/
+.idea/
+*.swp
+*~
+Thumbs.db
+desktop.ini

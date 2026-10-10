@@ -12,7 +12,7 @@
 #
 # Settings (environment variables):
 #   IMSPROG_URL, SFPMASTER_URL   git URLs to clone from (default: the Anime4000 forks)
-#   LIBUSB341_URL                git URL of libusb341; without it ~/libusb341 must exist
+#   LIBUSB341_URL                git URL of libusb341 (default: github.com/Anime4000/libusb341)
 #   ONLY=imsprog | sfp-master    build just one of the two
 #   SKIP_PACMAN=1                do not install/check MSYS2 packages
 #   SKIP_UPDATE=1                do not git pull existing checkouts
@@ -26,7 +26,7 @@ set -euo pipefail
 WORKDIR=${WORKDIR:-$HOME}
 IMSPROG_URL=${IMSPROG_URL:-https://github.com/Anime4000/IMSProg.git}
 SFPMASTER_URL=${SFPMASTER_URL:-https://github.com/Anime4000/SFP-Master.git}
-LIBUSB341_URL=${LIBUSB341_URL:-}
+LIBUSB341_URL=${LIBUSB341_URL:-https://github.com/Anime4000/libusb341.git}
 ONLY=${ONLY:-}
 
 log()  { printf '\n\033[1;36m==> %s\033[0m\n' "$*"; }
@@ -66,7 +66,7 @@ sync_repo() {
 		warn "$dir is not a git checkout; building it as it is"
 	elif [ -n "$url" ]; then
 		log "Cloning $url"
-		git clone "$url" "$dir"
+		GIT_TERMINAL_PROMPT=0 git clone "$url" "$dir" || return 1
 	else
 		return 1
 	fi
@@ -74,7 +74,7 @@ sync_repo() {
 
 build_shim() {
 	sync_repo "$SHIM" "$LIBUSB341_URL" ||
-		die "$SHIM not found: copy the libusb341 folder there, or set LIBUSB341_URL=<git url>"
+		die "could not get libusb341 from ${LIBUSB341_URL:-(no URL)}: copy the folder to $SHIM or set LIBUSB341_URL"
 	local mine="$SHIM/tools/build-ch341-apps.sh"
 	if [ -f "$mine" ] && ! cmp -s "$mine" "$0"; then
 		warn "$mine differs from this script; copy it over $0 if it is newer"
@@ -144,7 +144,7 @@ deploy() {
 
 do_imsprog() {
 	local src=$WORKDIR/IMSProg bld=$WORKDIR/build-imsprog qm
-	sync_repo "$src" "$IMSPROG_URL"
+	sync_repo "$src" "$IMSPROG_URL" || die "could not clone $IMSPROG_URL"
 	build_app "$src" "$bld"
 	mapfile -d '' qm < <(find "$bld" -name '*.qm' -print0)
 	deploy "$WORKDIR/IMSProg_win-amd64-shim" \
@@ -157,7 +157,7 @@ do_imsprog() {
 
 do_sfpmaster() {
 	local src=$WORKDIR/SFP-Master bld=$WORKDIR/build-sfp-master qm
-	sync_repo "$src" "$SFPMASTER_URL"
+	sync_repo "$src" "$SFPMASTER_URL" || die "could not clone $SFPMASTER_URL"
 	build_app "$src" "$bld"
 	mapfile -d '' qm < <(find "$bld" -name '*.qm' -print0)
 	deploy "$WORKDIR/SFP-Master_win-amd64-shim" "$bld/SFP-Master.exe" "${qm[@]}"
@@ -167,8 +167,8 @@ do_sfpmaster() {
 
 install_packages
 # Fetch the application sources first: the shim's tests compile parts of them.
-case "$ONLY" in ""|imsprog)    sync_repo "$WORKDIR/IMSProg" "$IMSPROG_URL" ;; esac
-case "$ONLY" in ""|sfp-master) sync_repo "$WORKDIR/SFP-Master" "$SFPMASTER_URL" ;; esac
+case "$ONLY" in ""|imsprog)    sync_repo "$WORKDIR/IMSProg" "$IMSPROG_URL" || die "could not clone $IMSPROG_URL" ;; esac
+case "$ONLY" in ""|sfp-master) sync_repo "$WORKDIR/SFP-Master" "$SFPMASTER_URL" || die "could not clone $SFPMASTER_URL" ;; esac
 build_shim
 export SKIP_UPDATE=1    # already updated above
 case "$ONLY" in
