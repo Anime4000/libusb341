@@ -4,6 +4,10 @@
 #
 # Run it from the MSYS2 MINGW64 (or UCRT64) shell:  ~/build-ch341-apps.sh
 #
+# On a new MSYS2 install, fetch it first:
+#   curl -fsSL https://raw.githubusercontent.com/Anime4000/libusb341/main/tools/build-ch341-apps.sh -o ~/build-ch341-apps.sh
+#   bash ~/build-ch341-apps.sh
+#
 # Everything happens in the home folder:
 #   ~/IMSProg  ~/SFP-Master  ~/libusb341       sources: cloned if missing, else updated
 #   ~/build-imsprog  ~/build-sfp-master        build trees
@@ -19,9 +23,12 @@
 #   RUN_TESTS=1                  run the libusb341 simulator tests first
 #   WORKDIR=/some/dir            use another folder instead of ~
 #
-# A copy of this script is kept in libusb341/tools/build-ch341-apps.sh.
+# The master copy is libusb341/tools/build-ch341-apps.sh; when libusb341 is updated
+# and carries a newer SCRIPT_VERSION, this script replaces itself with it and restarts.
 
 set -euo pipefail
+
+SCRIPT_VERSION=2
 
 WORKDIR=${WORKDIR:-$HOME}
 IMSPROG_URL=${IMSPROG_URL:-https://github.com/Anime4000/IMSProg.git}
@@ -72,13 +79,30 @@ sync_repo() {
 	fi
 }
 
-build_shim() {
+sync_shim() {
 	sync_repo "$SHIM" "$LIBUSB341_URL" ||
 		die "could not get libusb341 from ${LIBUSB341_URL:-(no URL)}: copy the folder to $SHIM or set LIBUSB341_URL"
-	local mine="$SHIM/tools/build-ch341-apps.sh"
-	if [ -f "$mine" ] && ! cmp -s "$mine" "$0"; then
-		warn "$mine differs from this script; copy it over $0 if it is newer"
-	fi
+}
+
+# Replace this script with libusb341's copy if that one is newer, then restart it.
+self_update() {
+	local master="$SHIM/tools/build-ch341-apps.sh" me ver
+	[ -f "$master" ] || return 0
+	me=$(realpath "$0")
+	[ "$me" = "$(realpath "$master")" ] && return 0
+	# tr: a checkout made with Git for Windows may have CRLF line endings
+	ver=$(tr -d '\r' < "$master" | sed -n 's/^SCRIPT_VERSION=\([0-9][0-9]*\)$/\1/p' | head -n 1)
+	[ "${ver:-0}" -gt "$SCRIPT_VERSION" ] || return 0
+	[ -z "${CH341_APPS_RESTARTED:-}" ] || return 0
+	log "Updating $me to version $ver from libusb341"
+	tr -d '\r' < "$master" > "$me.new"
+	mv -f "$me.new" "$me"
+	chmod +x "$me"
+	export CH341_APPS_RESTARTED=1
+	exec bash "$me" "$@"
+}
+
+build_shim() {
 	log "Building libusb341"
 	make -C "$SHIM"
 	if [ -n "${RUN_TESTS:-}" ]; then
@@ -166,7 +190,9 @@ do_sfpmaster() {
 # ---------------------------------------------------------------------------
 
 install_packages
-# Fetch the application sources first: the shim's tests compile parts of them.
+sync_shim
+self_update "$@"
+# Fetch the application sources before building: the shim's tests compile parts of them.
 case "$ONLY" in ""|imsprog)    sync_repo "$WORKDIR/IMSProg" "$IMSPROG_URL" || die "could not clone $IMSPROG_URL" ;; esac
 case "$ONLY" in ""|sfp-master) sync_repo "$WORKDIR/SFP-Master" "$SFPMASTER_URL" || die "could not clone $SFPMASTER_URL" ;; esac
 build_shim

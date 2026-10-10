@@ -44,12 +44,20 @@ libusb and libftdi are statically linked into that EXE (its import table lists o
 KERNEL32, msvcrt and Qt5), so no DLL can intercept it.
 
 `tools/build-ch341-apps.sh` rebuilds both programs from their unmodified sources with
-libusb linked as a DLL. Copy it to your MSYS2 home and run it from the MINGW64 (or UCRT64)
-shell:
+libusb linked as a DLL. On any MSYS2 install, download it to your home folder and run it
+from the MINGW64 (or UCRT64) shell:
 
 ```bash
-cp ~/libusb341/tools/build-ch341-apps.sh ~ && ~/build-ch341-apps.sh
+curl -fsSL https://raw.githubusercontent.com/Anime4000/libusb341/main/tools/build-ch341-apps.sh -o ~/build-ch341-apps.sh
 ```
+
+```bash
+bash ~/build-ch341-apps.sh
+```
+
+After the first run, just run `~/build-ch341-apps.sh` again to update and rebuild
+everything. When `libusb341` carries a newer version of the script (a higher
+`SCRIPT_VERSION`), the script replaces itself with it and restarts.
 
 It installs the MSYS2 packages it needs (Qt6, libusb, libftdi, CMake, Ninja). It also
 clones `~/IMSProg` and `~/SFP-Master`, or fast-forwards them if they already exist, and
@@ -65,8 +73,7 @@ In each folder, `libusb-1.0.dll` is this shim and `libusb-1.0.orig.dll` is MSYS2
 So a CH341A on the WCH driver goes through the shim, while FT232H (through
 `libftdi1.dll`) and CH347 go through the original libusb.
 
-On another PC, the script clones this repository from
-`https://github.com/Anime4000/libusb341.git` if `~/libusb341` is missing (set
+The script clones this repository to `~/libusb341` if it is missing (set
 `LIBUSB341_URL` to use another URL). Other settings (`ONLY`, `SKIP_PACMAN`,
 `SKIP_UPDATE`, `RUN_TESTS`, the IMSProg/SFP-Master URLs) are listed at the top of the
 script.
